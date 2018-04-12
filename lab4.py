@@ -2,17 +2,19 @@ import gensim
 import numpy as np
 import os
 import pandas as pd
+import tensorflow as tf
 
 
-# from lab4 import *; sdl = SentimentDeepLearner(); df = sdl._prepare_data(sentence_from_scratch=False, vectors_from_scratch=True)
+# from lab4 import *; sdl = SentimentDeepLearner()
 class SentimentDeepLearner(object):
 
     def __init__(self, word2vec_path='D:/Temp/GoogleNews-vectors-negative300.bin'):
         self.word2vec_path = word2vec_path
         self.base_folder = os.path.realpath(os.getcwd())
         self.class_labels = ['strongly negative', 'negative', 'neutral', 'positive', 'strongly positive']
-        self.max_words = 56  # maximum number of words in a sentence (from analysis of SOStr.txt)
+        self.max_words = 56  # maximum number of words in a sentence (from analysis of SOStr.txt), 19.2 average
         self.embedding_size = 300  # from Google word2vec
+        self.empty_embedding = np.zeros([1, self.embedding_size])
 
     def _build_labeled_sentences(self):
         """
@@ -64,7 +66,7 @@ class SentimentDeepLearner(object):
         #   "SOStr.txt" (no header):  <word>|<word>|...
         words = pd.read_csv(os.path.join(self.base_folder, 'sentimentData/SOStr.txt'), sep=' ', header=None)
         words.columns = ['wordstring']  # single column
-        words['wordstring'] = words.apply(self._standard_size, axis=1)  # regularize sentence length
+        words['wordstring'] = words.apply(self._helper_standard_size, axis=1)  # regularize sentence length
         data = data.join(words)
 
         # 8. Drop "dev" labeled rows (this saves time on embedding)
@@ -77,72 +79,68 @@ class SentimentDeepLearner(object):
         data.to_csv(os.path.join(self.base_folder, 'sentimentData/labeled_sentences.txt'), header=True, index=False, sep='\t')
         return data
 
-    def _build_sentence_vectors(self, data):
+    @staticmethod
+    def _build_word_matrix(labeled_sentences):
         """
-        Create a datset which contains the word vectors of all the sentences.
+        Build a 2-D array with num_sentences x max_words.
 
-        @use
-            This should be called after self._build_sentence_dataset
-            Loads the word2vec model and extracts vectors to save, so the model doesn't have to stay in memory
-            Sentences (10,243), MaxSentence (56 words), EmbeddingArray (300) = 172M cells, 10,243 x 16,800
+        :param labeled_sentences: (pd.DataFrame)
+            Output from self._build_labeled_sentences
 
+        :return word_matrix, sentence_labels: (np.array, np.array)
         """
-        sentence_count = len(data)
-        empty = [0 for i in range(self.embedding_size)]  # no word, or word not in word2vec
+        data = []
+        for irow, row in labeled_sentences.iterrows():
+            data.append(row['wordstring'].split('|'))
+        word_matrix = np.array(data)
+        sentence_labels = np.array(labeled_sentences['sentiment_label'])
+        return word_matrix, sentence_labels
 
-        # Load the word2vec model (this takes a couple minutes)
-        #   REF (download): https://code.google.com/archive/p/word2vec/
-        #   REF (load): http://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
-        print('Loading word2vec model...')
-        model = gensim.models.KeyedVectors.load_word2vec_format(self.word2vec_path, binary=True)
-
-        # Build out 16,800 columns for each sentence from word vectors
-        print('Building sentence vectors...')
-        sentence_vectors = np.ndarray(shape=(sentence_count, self.max_words * self.embedding_size))
-        for sentence_index, row in data.iterrows():
-            words = row.wordstring.split('|')
-            # Concatenate all word vectors for sentence (using empty if not in model or empty word)
-            sentence_vector = np.concatenate(
-                [(model.get_vector(word) if word and word in model else empty) for word in words],
-                axis=0
-            )
-            sentence_vectors[sentence_index] = np.transpose(sentence_vector)  # convert column vector to row
-
-        # Create dataframe
-        print('Building dataframe...')
-        columns = []
-        for i in range(self.max_words):  # each word
-            for j in range(self.embedding_size):  # each embedding dimension for the word
-                columns.append('{0}.{1}'.format(i, j))
-        df = pd.DataFrame(sentence_vectors, columns=columns)
-        # NOTE: Easier to simply re-generate the frame as the file is over 1GB and takes a while to write
-        # df.to_csv(os.path.join(self.base_folder, 'sentimentData/sentence_vectors.txt'), header=True, sep=',')
-        return df
-
-    def _prepare_data(self, sentence_from_scratch=False, vectors_from_scratch=True):
+    def _get_batch(self, word2vec, word_matrix, sentence_labels, batch_size):
         """
-        Pre-process data files
+        Get a data for tensorflow by adding a new dimension (word embeddings) to sampling of word_matrix
+
+        :param word2vec: (gensim.models.KeyedVectors)
+            Pre-trained word embeddings.
+        :param word_matrix: (np.array)
+            The words in each sentence (sentences x max_words)
+        :param sentence_labels: (np.array)
+            The class label (sentences x 1)
+        :param batch_size: (int)
+            Number of random samples to use in batch
+
+        :return batch, labels: (np.array, np.array)
+            batch.shape = (batch_size, self.max_words, self.embedding_size)
+            labels.shape = (1, batch_size)
         """
-        # 1. Get labeled sentences with word parse
-        if sentence_from_scratch:
-            labeled_sentences = self._build_labeled_sentences()
-        else:
-            labeled_sentences = pd.read_csv(os.path.join(self.base_folder, 'sentimentData/labeled_sentences.txt'), sep='\t')
+        # TODO: modify randomly sample sentences (instead of adjacent blocks)
+        # see Helper Functions @ https://www.oreilly.com/learning/perform-sentiment-analysis-with-lstms-using-tensorflow
+        # TODO: return labels as well
+        batch = np.zeros([len(word_matrix), self.max_words, self.embedding_size])  # len(word_matrix) == batch_size
+        for isentence, sentence in enumerate(word_matrix):
+            for iword, word in enumerate(sentence):
+                batch[isentence][iword] = word2vec.get_vector(word) if word and word in word2vec else self.empty_embedding
+        return tf.Variable(batch, dtype=tf.float32), []
 
-        # 2. Get word vectors for each sentence
-        if vectors_from_scratch:
-            # NOTE: if you want to save a file version, need to uncomment at the end of the function (warning LARGE)
-            sentence_vectors = self._build_sentence_vectors(labeled_sentences)
-        else:
-            sentence_vectors = pd.read_csv(os.path.join(self.base_folder, 'sentimentData/sentence_vectors.txt'), sep=',')
+    def _helper_sentence_stats(self):
+        """"
+        Get some information about the sentences.
+        """
+        words = pd.read_csv(os.path.join(self.base_folder, 'sentimentData/SOStr.txt'), sep=' ', header=None)
+        words.columns = ['wordstring']  # single column
+        max_length = 0
+        max_length_idx = 0
+        avg_length = 0
+        for sentence_index, row in words.iterrows():
+            length = len(row.wordstring.split('|'))
+            avg_length += length
+            if length > max_length:
+                max_length = length
+                max_length_idx = sentence_index
+        avg_length /= len(words)
+        return max_length, max_length_idx, avg_length
 
-        print(sentence_vectors.shape)
-
-        # Split into train and test
-        # train_data = data.loc[data['splitset_label'] == 1]
-        # test_data = data.loc[data['splitset_label'] == 2]
-
-    def _standard_size(self, row):
+    def _helper_standard_size(self, row):
         """
         Add additional placeholders so that a sentence parses to a fixed number of words (upper bound of all sentences)
 
@@ -156,11 +154,73 @@ class SentimentDeepLearner(object):
         items.extend(['' for i in range(self.max_words - len(items))])
         return '|'.join(items)
 
-    def main(self):
+    def train(self, batch_size=24, iterations=10000, lstm_count=64):
         """
+        Build and run a tensorflow classifier on the sentiment data.
 
         @requires
             Google news word vectors are downloaded by user and specified at initialization (not synced due to size)
         """
-        # Load pre-trained word vectors from Google word2vec (this can take a while)
-        pass
+        # Load and pre-process data
+        print('Loading raw data...')
+        labeled_sentences = pd.read_csv(os.path.join(self.base_folder, 'sentimentData/labeled_sentences.txt'), sep='\t')
+        # Limit to only training rows
+        training_sentences = labeled_sentences[labeled_sentences['splitset_label'] == 1]
+        # Parse sentences to individual words
+        word_matrix, sentence_labels = self._build_word_matrix(training_sentences)
+
+        # Load the pre-trained word vectors
+        #   REF (download): https://code.google.com/archive/p/word2vec/
+        #   REF (load): http://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
+        print('Loading word2vec model...')
+        word2vec = gensim.models.KeyedVectors.load_word2vec_format(self.word2vec_path, binary=True)
+
+        print('Initializing Tensorflow model...')
+        num_classes = len(self.class_labels)
+
+        # Placeholders
+        tf.reset_default_graph()
+        labels = tf.placeholder(tf.float32, [batch_size, num_classes])
+        batch = tf.placeholder(tf.float32, [batch_size, self.max_words, self.embedding_size])
+
+        # LSTM layer
+        lsmtm = tf.contrib.rnn.BasicLSTMCell(lstm_count)
+        lstm_outputs, state = tf.nn.dynamic_rnn(lsmtm, batch, dtype=tf.float32)
+
+        # Weights and bias for training
+        weights = tf.Variable(tf.truncated_normal([lstm_count, num_classes]))
+        bias = tf.Variable(tf.constant(0.1, shape=[num_classes]))
+        lstm_outputs = tf.transpose(lstm_outputs, [1, 0, 2])
+        last_iter = tf.gather(lstm_outputs, int(lstm_outputs.get_shape()[0]) - 1)
+
+        # Evaluation
+        prediction = (tf.matmul(last_iter, weights) + bias)
+        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(labels, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+
+        # Optimizer
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels))
+        optimizer = tf.train.AdamOptimizer().minimize(loss)
+
+        # TODO - connect max pooling layer
+
+        # Initialize
+        init = tf.global_variables_initializer()
+        sess = tf.Session()
+        saver = tf.train.Saver()
+        sess.run(init)
+
+        # Run the training
+        print('Running Tensorflow model...')
+        for i in range(iterations):
+            # Run a batch
+            batch, labels = self._get_batch(word2vec, word_matrix, sentence_labels, batch_size)
+            sess.run(optimizer, {'input_data': batch, 'labels': labels})
+
+            # TODO - run pooling
+
+            # Save the network every 10,000 training iterations
+            if i % 10000 == 0 and i:
+                print('Saving iteration of model...')
+                saver.save(sess, os.path.join(self.base_folder, "models/base_model.ckpt"), global_step=i)
+        print('Done!')
