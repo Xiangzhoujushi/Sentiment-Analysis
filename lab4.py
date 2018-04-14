@@ -203,6 +203,7 @@ class SentimentDeepLearner(object):
         optimizer = tf.train.AdamOptimizer().minimize(loss)
 
         # TODO - connect max pooling layer
+		pool = tf.layers.max_pooling2d(inputs=batch, pool_size=[2,2], strides =2)
 
         # Initialize
         init = tf.global_variables_initializer()
@@ -218,6 +219,7 @@ class SentimentDeepLearner(object):
             sess.run(optimizer, {'input_data': batch, 'labels': labels})
 
             # TODO - run pooling
+			pool = tf.layers.max_pooling2d(inputs=batch, pool_size=[2,2], strides =2)
 
             # Save the network every 10,000 training iterations
             if i % 10000 == 0 and i:
