@@ -1,1 +1,50 @@
-README for project
+# Group
+Peiyuan Tang tang.794
+Patrick Green green.1125
+Trevor Rambacher rambacher.8
+
+# Lab 4: Sentiment Analysis
+  DUE : 4/17/2018
+  Option 3: Deep Learning / Option 2: Classifier Compare
+
+
+# Overview:
+We initially intended to complete Option 3 (Deep Learning), but we were unable to finish.
+Option 2 (Classifier Comparison) was completed without a writeup by one of the group members to compensate.
+
+NOTE: If only considering one part for grading, please grade lab4-option3, even though it is incomplete.
+
+### Option 3 ###
+
+# Initialization
+We used Google's pretraineed word2vec vectors for training.
+A copy of the file must be loaded locally for the code to work: https://code.google.com/archive/p/word2vec/
+The path should be specified in the initialization
+
+    word2vec_path = 'D:/Temp/GoogleNews-vectors-negative300.bin'
+    from lab4 import *; sdl = SentimentDeepLearner(word2vec_path=word2vec_path)
+
+# Preprocessing
+Generate the "labeled_sentences.txt" file
+This preprocessing performs several steps:
+- Condenses data across multiple files to a single file
+- Represents sentences as pipe-separated word parse
+- Standardizes sentence length to maximum length (56 words) and pads others with empty string
+- Converts the continuous sentiment attribute to label bins: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+- Strips out the "dev" parition (train and test only)
+This file is then used directly for training
+
+    sdl._build_labeled_sentences()
+
+# Training
+Specify the batch size, iterations and number of lstm
+This code is incomplete and does not run.
+INCOMPLETE:
+- Pull labels in batching for classification evaluation
+- Randomize batches instead of continuous blocks
+- Correctly attach lstm and classification layers
+
+    batch_size=24
+    iterations=10000
+    lstm_count=64
+    sdl.train(batch_size=batch_size, iterations=iterations, lstm_count=lstm_count)
