@@ -16,10 +16,12 @@ NOTE: If only considering one part for grading, please grade lab4-option3, even 
 
 ### Option 3 ###
 
-# Initialization
+# Initialization / word2vec
 We used Google's pretraineed word2vec vectors for training.
 A copy of the file must be loaded locally for the code to work: https://code.google.com/archive/p/word2vec/
 The path should be specified in the initialization
+This is a large file that may not load on all machines (there are restrictions on 64-bit python and memory)
+REF: http://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
 
     word2vec_path = 'D:/Temp/GoogleNews-vectors-negative300.bin'
     from lab4 import *; sdl = SentimentDeepLearner(word2vec_path=word2vec_path)
