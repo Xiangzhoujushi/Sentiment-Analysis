@@ -1,0 +1,21 @@
+
+Choose the second option for the lab 4
+
+Readme File
+
+In order to run the file <lab4-part2.ipynb> please install jupyter notebook on computer. 
+And run 'jupyter notebook' in the command line for iteractive python. 
+
+later, please click run for each snippet and the output for final lines are accuracy rate.
+
+Please
+
+I choose three methods for my implementation of the calssifiers, SGD (Stochastic Gradient Descent), SVM (Support Vector Machine), and Neuro Network. All of them need a fairly long time to adjust the parameters to get a better result in label prediction. However, the accuracy rate is not that optimal, mainly because for the word vector, I only considered those occuring in the corpus. 
+
+(1) The reason that I choose SGD is because it is stochastic. And it is somehow objective and can fit into all kinds of scenarios. It is fast and it builds up the linear classifier, which is good in our cases.
+
+(2) The reason that I choose SVM is because it is the most common method that we use for machine learning. And I indeed like the higher order optimization in some cases. 
+
+(3) The reason that I choose (multiple layer) Nero network is because it is nonlinear and it is extremely powerful nowadays. It is nonlinear and can be compared with previous two methods.
+
+The neuronetwork normally has the highest accuracy rate,while the svm always has the lowest accuracy rate. I am a little bit confused. 
