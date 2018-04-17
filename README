@@ -1,1 +1,13 @@
 README for project
+
+For lab4-part2.ipynb, it is the file for option 2
+(For running the interactive python program, the user just need to download Jupiter notebook first, and then type "jupyter notebook" in the command window to start the local server for running the jupyter notebook. For each input and output, just click to see the result and you will get a final result
+
+While the lab4.py is the file for option 3. 
+
+I choose three classifiers and compare them, (1) SGD, stochastic gradient descent, (2) SVM, support vector machine (3) neuronetwork. All of them are good supervised classifiers and I test the data and measure the accuracy rate for evaluations. 
+For SGD, it is a good linear classifier which can predict the value of input in all kinds of scenarios because of its stochastic feature. SVM is a good classifier which uses second 
+Order optimization to find the linear classifier. Neuronetwork is a deep learning method which deals with multi-layer scenarios, and is not linear. I use all of them and want to compare the accuracy between different common classifiers. 
+
+From my tests based on different parameter settings, the SGD gives the lowest accuracy rate, while the neuronetwork method gives the highest accuracy rate, in case that the word vector extraction does not directly reflect the emotion expressed from each word, but it sometimes is encoded by the frequency of the words, which is not that related to the mood of the sentence. In such cases, I only got accuracy rte around 40% for all those 3 methods at most. 
+
